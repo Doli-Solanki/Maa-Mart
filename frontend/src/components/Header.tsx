@@ -274,6 +274,14 @@ export function Header({
                   <DropdownMenuItem onSelect={() => navigate("/profile")}>
                     Profile
                   </DropdownMenuItem>
+                  {user.role === "admin" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => navigate("/admin")}>
+                        Admin Panel
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => logout()}>
                     Logout
@@ -429,6 +437,18 @@ export function Header({
                     <User className="w-4 h-4 mr-2" />
                     {user.name}
                   </Button>
+                  {user.role === "admin" && (
+                    <Button
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        navigate("/admin");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Admin Panel
+                    </Button>
+                  )}
                   <Button
                     variant="destructive"
                     className="justify-start"

@@ -4,6 +4,7 @@ export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  role?: string;
 };
 
 export type AuthContextType = {
@@ -14,24 +15,36 @@ export type AuthContextType = {
   logout: () => void;
   updateProfile: (name: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  token: string | null;
+  isAdmin: () => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'auth_user_v1';
-const CREDENTIALS_KEY = 'auth_credentials_v1';
+const TOKEN_KEY = 'auth_token_v1';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [credentials, setCredentials] = useState<Record<string, string>>({}); // email -> password
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
-      const credRaw = localStorage.getItem(CREDENTIALS_KEY);
-      if (credRaw) setCredentials(JSON.parse(credRaw));
+      const tokenRaw = localStorage.getItem(TOKEN_KEY);
+      if (raw && tokenRaw) {
+        setUser(JSON.parse(raw));
+        setToken(tokenRaw);
+      }
     } catch (e) {
       console.error('Failed to parse auth user from storage', e);
     } finally {
@@ -40,60 +53,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    else localStorage.removeItem(STORAGE_KEY);
-  }, [user]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials));
-    } catch (e) {
-      console.error('Failed to persist auth credentials', e);
+    if (user && token) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(TOKEN_KEY);
     }
-  }, [credentials]);
+  }, [user, token]);
 
   const login = async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 300));
-    const existingPassword = credentials[email];
-    if (existingPassword !== undefined) {
-      if (existingPassword !== password) {
-        throw new Error('Invalid credentials');
-      }
-      // keep existing user if same email
-      setUser((prev) => prev?.email === email ? prev : { id: crypto.randomUUID(), name: email.split('@')[0] || 'User', email });
-    } else {
-      // First-time login for unknown email: auto-create (mock)
-      setCredentials((prev) => ({ ...prev, [email]: password }));
-      setUser({ id: crypto.randomUUID(), name: email.split('@')[0] || 'User', email });
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Invalid credentials');
     }
+    const data = await response.json();
+    setToken(data.token);
+    setUser({
+      id: String(data.user.id),
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
+    });
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 400));
-    setCredentials((prev) => ({ ...prev, [email]: password }));
-    setUser({ id: crypto.randomUUID(), name: name || email.split('@')[0] || 'User', email });
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to sign up');
+    }
+    // Auto login after signup
+    await login(email, password);
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+  };
 
   const updateProfile = async (name: string) => {
-    if (!user) return;
-    await new Promise((r) => setTimeout(r, 200));
+    if (!user || !token) return;
+    // TODO: Implement profile update API endpoint
     setUser({ ...user, name });
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
-    if (!user) throw new Error('Not authenticated');
-    const existing = credentials[user.email];
-    if (existing === undefined) throw new Error('Account not found');
-    if (existing !== currentPassword) throw new Error('Current password is incorrect');
-    await new Promise((r) => setTimeout(r, 300));
-    setCredentials((prev) => ({ ...prev, [user.email]: newPassword }));
+    if (!user || !token) throw new Error('Not authenticated');
+    // TODO: Implement change password API endpoint
+    throw new Error('Change password not implemented yet');
+  };
+
+  const isAdmin = () => {
+    return user?.role === 'admin';
   };
 
   const value = useMemo(
-    () => ({ user, loading, login, signup, logout, updateProfile, changePassword }),
-    [user, loading]
+    () => ({ user, loading, login, signup, logout, updateProfile, changePassword, token, isAdmin }),
+    [user, loading, token]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
