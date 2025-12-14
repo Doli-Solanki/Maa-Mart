@@ -22,12 +22,13 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
-// Validate critical environment variables
+/* ----------------------- Required ENV sanity checks ----------------------- */
 if (!process.env.JWT_SECRET) {
   console.error("❌ CRITICAL: JWT_SECRET environment variable is required!");
   process.exit(1);
 }
 
+/* --------------------------------- App ----------------------------------- */
 const app = express();
 
 // Security: Helmet for security headers
@@ -48,7 +49,6 @@ try {
   console.error("Error setting up morgan:", err);
 }
 
-// Security: Configure CORS properly (before rate limiting)
 const corsOptions = {
   origin:
     process.env.FRONTEND_URL ||
@@ -78,7 +78,7 @@ try {
   // Server can still run without static file serving
 }
 
-// Rate limiting for auth endpoints
+/* ----------------------------- Rate limiting ----------------------------- */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 requests per windowMs
@@ -91,10 +91,9 @@ const authLimiter = rateLimit({
   },
 });
 
-// General rate limiting
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
@@ -144,11 +143,12 @@ app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+/* ------------------------------ Bootstrapping ---------------------------- */
 const PORT = process.env.PORT || 5000;
 
-// Database connection and sync
 (async () => {
   try {
+    // Ensure DB is reachable
     await sequelize.authenticate();
     console.log("✅ MySQL connected successfully!");
 

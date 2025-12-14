@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -142,7 +141,9 @@ export default function OrderManagement({ onUpdate }: { onUpdate?: () => void })
                   <TableCell>
                     {Array.isArray(order.items) ? order.items.length : 0} item(s)
                   </TableCell>
-                  <TableCell className="font-medium">${order.totalPrice.toFixed(2)}</TableCell>
+                  <TableCell className="font-medium">
+                    ${order.totalPrice.toFixed(2)}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{order.paymentMethod}</Badge>
                   </TableCell>
@@ -176,4 +177,3 @@ export default function OrderManagement({ onUpdate }: { onUpdate?: () => void })
     </div>
   );
 }
-
