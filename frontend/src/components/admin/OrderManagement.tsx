@@ -61,7 +61,7 @@ export default function OrderManagement({ onUpdate }: { onUpdate?: () => void })
     try {
       await apiRequest(`/admin/orders/${orderId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ paymentStatus: newStatus }),
+        body: { paymentStatus: newStatus },
       });
       toast.success('Order status updated');
       fetchOrders();

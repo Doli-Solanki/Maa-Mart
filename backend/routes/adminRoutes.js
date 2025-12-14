@@ -1,6 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import { authenticate, isAdmin } from '../middleware/authMiddleware.js';
+import { uploadProductImage } from '../middleware/uploadMiddleware.js';
 import { getAllUsers, getUserById, getAllOrders, getOrderById, updateOrderStatus, getDashboardStats } from '../controllers/adminController.js';
 import { addProduct, updateProduct, deleteProduct, getProductById } from '../controllers/productController.js';
 
@@ -21,8 +22,8 @@ router.get('/orders/:id', getOrderById);
 router.put('/orders/:id/status', updateOrderStatus);
 
 // Product management
-router.post('/products', addProduct);
-router.put('/products/:id', updateProduct);
+router.post('/products', uploadProductImage, addProduct);
+router.put('/products/:id', uploadProductImage, updateProduct);
 router.delete('/products/:id', deleteProduct);
 router.get('/products/:id', getProductById);
 

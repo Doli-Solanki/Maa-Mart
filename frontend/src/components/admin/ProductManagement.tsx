@@ -76,6 +76,8 @@ export default function ProductManagement({
     image: "",
     categoryId: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -143,6 +145,8 @@ export default function ProductManagement({
         image: product.image || "",
         categoryId: product.categoryId ? String(product.categoryId) : "",
       });
+      setImagePreview(product.image || null);
+      setImageFile(null);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -153,6 +157,8 @@ export default function ProductManagement({
         image: "",
         categoryId: "",
       });
+      setImagePreview(null);
+      setImageFile(null);
     }
     setIsDialogOpen(true);
   };
@@ -168,30 +174,66 @@ export default function ProductManagement({
       image: "",
       categoryId: "",
     });
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
+        return;
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
+      setImageFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      // Clear URL input if file is selected
+      setFormData({ ...formData, image: "" });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        image: formData.image,
-        categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
-      };
+      // Create FormData for file uploads
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("price", formData.price);
+      formDataToSend.append("stock", formData.stock);
+
+      if (formData.categoryId) {
+        formDataToSend.append("categoryId", formData.categoryId);
+      }
+
+      // Add image: prioritize file upload, then URL
+      if (imageFile) {
+        formDataToSend.append("image", imageFile);
+      } else if (formData.image) {
+        formDataToSend.append("image", formData.image);
+      }
 
       if (editingProduct) {
         await apiRequest(`/admin/products/${editingProduct.id}`, {
           method: "PUT",
-          body: JSON.stringify(payload),
+          body: formDataToSend,
         });
         toast.success("Product updated successfully");
       } else {
         await apiRequest("/admin/products", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: formDataToSend,
         });
         toast.success("Product created successfully");
       }
@@ -380,16 +422,19 @@ export default function ProductManagement({
               <div className="grid gap-2">
                 <Label htmlFor="categoryId">Category</Label>
                 <Select
-                  value={formData.categoryId}
+                  value={formData.categoryId || "none"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, categoryId: value })
+                    setFormData({
+                      ...formData,
+                      categoryId: value === "none" ? "" : value,
+                    })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={String(cat.id)}>
                         {cat.name}
@@ -399,16 +444,44 @@ export default function ProductManagement({
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="image">Image URL</Label>
-                <Input
-                  id="image"
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image: e.target.value })
-                  }
-                  placeholder="https://example.com/image.jpg"
-                />
+                <Label htmlFor="image">Product Image</Label>
+                <div className="space-y-2">
+                  <Input
+                    id="image-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Or enter an image URL below
+                  </p>
+                  <Input
+                    id="image"
+                    type="url"
+                    value={formData.image}
+                    onChange={(e) => {
+                      setFormData({ ...formData, image: e.target.value });
+                      // Clear file when URL is entered
+                      if (e.target.value) {
+                        setImageFile(null);
+                        setImagePreview(e.target.value);
+                      }
+                    }}
+                    placeholder="https://example.com/image.jpg"
+                    disabled={!!imageFile}
+                  />
+                  {imagePreview && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Preview:</p>
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded border"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <DialogFooter>

@@ -1,4 +1,5 @@
 import { Product, Category } from "../models/index.js";
+import { getImageUrl, deleteImageFile } from "../middleware/uploadMiddleware.js";
 
 // Get all products
 export const getProducts = async (req, res) => {
@@ -20,7 +21,7 @@ export const getProducts = async (req, res) => {
         description: productData.description || '',
         price: productData.price,
         originalPrice: productData.originalPrice || null,
-        image: productData.image || '',
+        image: getImageUrl(productData.image) || '',
         category: productData.category?.name || 'Uncategorized',
         categoryId: String(productData.categoryId || productData.category_id || ''),
         rating: productData.rating || 4.5, // Default rating
@@ -62,7 +63,7 @@ export const getProductById = async (req, res) => {
       description: productData.description || '',
       price: productData.price,
       originalPrice: productData.originalPrice || null,
-      image: productData.image || '',
+      image: getImageUrl(productData.image) || '',
       category: productData.category?.name || 'Uncategorized',
       categoryId: String(productData.categoryId || productData.category_id || ''),
       rating: productData.rating || 4.5,
@@ -84,28 +85,46 @@ export const getProductById = async (req, res) => {
 // Add new product
 export const addProduct = async (req, res) => {
   try {
+    console.log('Add product request body:', req.body);
+    console.log('Add product request file:', req.file);
+    
+    // FormData sends all fields as strings, so we need to parse them
     const { name, description, categoryId, price, stock, image } = req.body || {};
     
     // Input validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    if (!name || (typeof name !== 'string' && typeof name !== 'object') || String(name).trim().length === 0) {
       return res.status(400).json({ message: 'Product name is required' });
     }
     
-    if (!price || typeof price !== 'number' || price <= 0) {
+    const nameStr = String(name).trim();
+    const priceNum = price ? parseFloat(price) : null;
+    const stockNum = stock !== undefined && stock !== null && stock !== '' ? parseInt(stock) : 0;
+    
+    if (!priceNum || isNaN(priceNum) || priceNum <= 0) {
       return res.status(400).json({ message: 'Valid price is required' });
     }
     
-    if (stock !== undefined && (typeof stock !== 'number' || stock < 0)) {
-      return res.status(400).json({ message: 'Stock must be a non-negative number' });
+    if (isNaN(stockNum) || stockNum < 0) {
+      return res.status(400).json({ message: 'Stock must be a valid non-negative number' });
+    }
+    
+    // Handle image: prioritize uploaded file, then URL from body
+    let imagePath = null;
+    if (req.file) {
+      // File was uploaded, use the filename
+      imagePath = req.file.filename;
+    } else if (image && typeof image === 'string' && image.trim()) {
+      // URL was provided
+      imagePath = image.trim();
     }
     
     const newProduct = await Product.create({
-      name: name.trim(),
-      description: description?.trim() || null,
-      categoryId: categoryId || null,
-      price,
-      stock: stock !== undefined ? stock : 0,
-      image: image?.trim() || null,
+      name: nameStr,
+      description: description ? String(description).trim() : null,
+      categoryId: categoryId && categoryId !== '' && categoryId !== 'none' ? parseInt(categoryId) : null,
+      price: priceNum,
+      stock: stockNum,
+      image: imagePath,
     });
     
     const productWithCategory = await Product.findByPk(newProduct.id, {
@@ -124,7 +143,7 @@ export const addProduct = async (req, res) => {
       description: productData.description || '',
       price: productData.price,
       originalPrice: productData.originalPrice || null,
-      image: productData.image || '',
+      image: getImageUrl(productData.image) || '',
       category: productData.category?.name || 'Uncategorized',
       categoryId: String(productData.categoryId || productData.category_id || ''),
       rating: productData.rating || 4.5,
@@ -139,13 +158,20 @@ export const addProduct = async (req, res) => {
     res.status(201).json(transformedProduct);
   } catch (error) {
     console.error('Add product error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 };
 
 // Update product
 export const updateProduct = async (req, res) => {
   try {
+    console.log('Update product request body:', req.body);
+    console.log('Update product request file:', req.file);
+    
     const { name, description, categoryId, price, stock, image } = req.body || {};
     const product = await Product.findByPk(req.params.id);
     
@@ -153,26 +179,53 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
     
-    // Validation for provided fields
-    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+    // Validation for provided fields (FormData sends strings)
+    if (name !== undefined && (typeof name !== 'string' && typeof name !== 'object') || String(name).trim().length === 0) {
       return res.status(400).json({ message: 'Product name must be a non-empty string' });
     }
     
-    if (price !== undefined && (typeof price !== 'number' || price <= 0)) {
-      return res.status(400).json({ message: 'Price must be a positive number' });
+    const priceNum = price !== undefined && price !== null && price !== '' ? parseFloat(price) : null;
+    if (price !== undefined && price !== null && price !== '' && (isNaN(priceNum) || priceNum <= 0)) {
+      return res.status(400).json({ message: 'Price must be a valid positive number' });
     }
     
-    if (stock !== undefined && (typeof stock !== 'number' || stock < 0)) {
-      return res.status(400).json({ message: 'Stock must be a non-negative number' });
+    const stockNum = stock !== undefined && stock !== null && stock !== '' ? parseInt(stock) : null;
+    if (stock !== undefined && stock !== null && stock !== '' && (isNaN(stockNum) || stockNum < 0)) {
+      return res.status(400).json({ message: 'Stock must be a valid non-negative number' });
+    }
+    
+    // Handle image update: prioritize uploaded file, then URL from body, or keep existing
+    let imagePath = product.image;
+    if (req.file) {
+      // New file uploaded - delete old image if it exists and is a local file
+      if (product.image) {
+        deleteImageFile(product.image);
+      }
+      imagePath = req.file.filename;
+    } else if (image !== undefined) {
+      // Image URL provided or cleared
+      if (image && typeof image === 'string' && image.trim()) {
+        // If it's a new URL and old image was local, delete old file
+        if (product.image && !product.image.startsWith('http')) {
+          deleteImageFile(product.image);
+        }
+        imagePath = image.trim();
+      } else {
+        // Image cleared - delete old file if it exists
+        if (product.image) {
+          deleteImageFile(product.image);
+        }
+        imagePath = null;
+      }
     }
     
     await product.update({
-      name: name !== undefined ? name.trim() : product.name,
-      description: description !== undefined ? (description?.trim() || null) : product.description,
-      categoryId: categoryId !== undefined ? categoryId : product.categoryId,
-      price: price !== undefined ? price : product.price,
-      stock: stock !== undefined ? stock : product.stock,
-      image: image !== undefined ? (image?.trim() || null) : product.image,
+      name: name !== undefined ? String(name).trim() : product.name,
+      description: description !== undefined ? (description ? String(description).trim() : null) : product.description,
+      categoryId: categoryId !== undefined ? (categoryId && categoryId !== '' && categoryId !== 'none' ? parseInt(categoryId) : null) : product.categoryId,
+      price: priceNum !== null ? priceNum : product.price,
+      stock: stockNum !== null ? stockNum : product.stock,
+      image: imagePath,
     });
     
     const updatedProduct = await Product.findByPk(product.id, {
@@ -191,7 +244,7 @@ export const updateProduct = async (req, res) => {
       description: productData.description || '',
       price: productData.price,
       originalPrice: productData.originalPrice || null,
-      image: productData.image || '',
+      image: getImageUrl(productData.image) || '',
       category: productData.category?.name || 'Uncategorized',
       categoryId: String(productData.categoryId || productData.category_id || ''),
       rating: productData.rating || 4.5,
@@ -206,7 +259,11 @@ export const updateProduct = async (req, res) => {
     res.json(transformedProduct);
   } catch (error) {
     console.error('Update product error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 };
 
@@ -217,6 +274,12 @@ export const deleteProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
+    
+    // Delete associated image file if it exists
+    if (product.image) {
+      deleteImageFile(product.image);
+    }
+    
     await product.destroy();
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
