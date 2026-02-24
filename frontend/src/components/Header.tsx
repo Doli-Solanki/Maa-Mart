@@ -56,6 +56,22 @@ export function Header({
     });
     return matches.slice(0, 8);
   })();
+
+  const scrollToProductGrid = () => {
+    const el = document.getElementById("product-grid");
+    if (el) {
+      window.scrollTo({
+        top: el.offsetTop - 80,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const goToProductsAndScroll = () => {
+    navigate("/");
+    // Allow route change to render the product grid before scrolling
+    setTimeout(scrollToProductGrid, 100);
+  };
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -131,14 +147,7 @@ export function Header({
                     setFocused(false);
                   } else if (e.key === "Enter" && suggestions.length > 0) {
                     e.preventDefault();
-                    onSearchChange("");
-                    const el = document.getElementById("product-grid");
-                    if (el) {
-                      window.scrollTo({
-                        top: el.offsetTop - 80,
-                        behavior: "smooth",
-                      });
-                    }
+                    goToProductsAndScroll();
                     setFocused(false);
                   }
                 }}
@@ -152,14 +161,9 @@ export function Header({
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
-                        onSearchChange("");
-                        const el = document.getElementById("product-grid");
-                        if (el) {
-                          window.scrollTo({
-                            top: el.offsetTop - 80,
-                            behavior: "smooth",
-                          });
-                        }
+                        // Keep the search term so the product grid filters to this product
+                        onSearchChange(p.name || "");
+                        goToProductsAndScroll();
                         setFocused(false);
                       }}
                     >
@@ -212,13 +216,21 @@ export function Header({
                 <DropdownMenuContent align="start">
                   <DropdownMenuLabel>Select Category</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => onCategorySelect(null)}>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      onCategorySelect(null);
+                      navigate("/");
+                    }}
+                  >
                     All Products
                   </DropdownMenuItem>
                   {categories.map((c) => (
                     <DropdownMenuItem
                       key={c.id}
-                      onSelect={() => onCategorySelect(c.id)}
+                      onSelect={() => {
+                        onCategorySelect(c.id);
+                        navigate("/");
+                      }}
                     >
                       <span className="mr-2">{c.icon}</span>
                       {c.name}
@@ -325,7 +337,7 @@ export function Header({
         {/* Mobile Search */}
         <div className="md:hidden mt-4">
           <div ref={mobileSearchRef} className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
               placeholder="Search products..."
@@ -337,14 +349,7 @@ export function Header({
                   setFocused(false);
                 } else if (e.key === "Enter" && suggestions.length > 0) {
                   e.preventDefault();
-                  onSearchChange("");
-                  const el = document.getElementById("product-grid");
-                  if (el) {
-                    window.scrollTo({
-                      top: el.offsetTop - 80,
-                      behavior: "smooth",
-                    });
-                  }
+                  goToProductsAndScroll();
                   setFocused(false);
                 }
               }}
@@ -358,14 +363,8 @@ export function Header({
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-3"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                      onSearchChange("");
-                      const el = document.getElementById("product-grid");
-                      if (el) {
-                        window.scrollTo({
-                          top: el.offsetTop - 80,
-                          behavior: "smooth",
-                        });
-                      }
+                      onSearchChange(p.name || "");
+                      goToProductsAndScroll();
                       setFocused(false);
                     }}
                   >
@@ -401,6 +400,7 @@ export function Header({
                 variant={selectedCategory === null ? "default" : "ghost"}
                 onClick={() => {
                   onCategorySelect(null);
+                  navigate("/");
                   setIsMenuOpen(false);
                 }}
                 className="justify-start"
@@ -415,6 +415,7 @@ export function Header({
                   }
                   onClick={() => {
                     onCategorySelect(category.id);
+                    navigate("/");
                     setIsMenuOpen(false);
                   }}
                   className="justify-start"
