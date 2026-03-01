@@ -1,6 +1,6 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { Order } from '../models/index.js';
+import { Order, Product, sequelize } from '../models/index.js';
 
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
@@ -24,20 +24,82 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // 1) Create pending order in database (before redirecting to Razorpay)
+    // 1) Validate stock availability and create order atomically
     let savedOrder = null;
 
-    if (orderData) {
+    if (orderData && orderData.items && orderData.items.length > 0) {
+      // Use a transaction to ensure atomicity
+      const transaction = await sequelize.transaction();
+
       try {
+        // Check stock availability for all items
+        for (const item of orderData.items) {
+          if (!item.productId || !item.quantity) {
+            await transaction.rollback();
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid order item: productId and quantity are required',
+            });
+          }
+
+          const product = await Product.findByPk(item.productId, { transaction });
+
+          if (!product) {
+            await transaction.rollback();
+            return res.status(404).json({
+              success: false,
+              message: `Product with ID ${item.productId} not found`,
+            });
+          }
+
+          if (product.stock < item.quantity) {
+            await transaction.rollback();
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for product "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+            });
+          }
+        }
+
+        // All stock checks passed, create the order
+        // Use authenticated user ID from request, not from orderData (security)
+        const userId = req.user?.id || orderData.userId || null;
+
+        // Normalize item field names: 'name' → 'productName' for consistent display
+        const normalizedItems = orderData.items.map((item) => ({
+          productId: item.productId,
+          productName: item.productName || item.name || 'Unknown Product',
+          quantity: item.quantity,
+          price: item.price,
+          image: item.image || null,
+        }));
+
         savedOrder = await Order.create({
-          userId: orderData.userId || null,
-          items: orderData.items || [],
+          userId: userId,
+          items: normalizedItems,
           totalPrice: orderData.totalPrice || amount,
           paymentMethod: 'Razorpay',
           paymentStatus: 'pending',
           address: orderData.address || 'Not provided',
-        });
+        }, { transaction });
+
+        // Reduce stock for each order item
+        for (const item of orderData.items) {
+          await Product.decrement(
+            'stock',
+            {
+              by: item.quantity,
+              where: { id: item.productId },
+              transaction
+            }
+          );
+        }
+
+        // Commit the transaction
+        await transaction.commit();
       } catch (dbError) {
+        // Rollback the transaction on any error
+        await transaction.rollback();
         console.error('Error creating pending order in database:', dbError);
         return res.status(500).json({
           success: false,
@@ -174,9 +236,9 @@ export const getPaymentDetails = async (req, res) => {
     const { paymentId } = req.params;
 
     if (!paymentId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Payment ID is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Payment ID is required'
       });
     }
 
@@ -197,10 +259,10 @@ export const getPaymentDetails = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching payment details:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to fetch payment details',
-      error: error.message 
+      error: error.message
     });
   }
 };

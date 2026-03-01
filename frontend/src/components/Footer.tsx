@@ -15,12 +15,12 @@ export function Footer() {
                 <span className="text-white font-bold text-xl">E</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold">EcoMart</h1>
+                <h1 className="text-2xl font-bold">Maa Mart</h1>
                 <p className="text-xs text-gray-400">Premium Shopping</p>
               </div>
             </div>
             <p className="text-gray-300 leading-relaxed">
-              Your trusted destination for fresh vegetables, fruits, groceries, jewelry, and more. 
+              Your trusted destination for fresh vegetables, fruits, groceries, jewelry, and more.
               Quality products at unbeatable prices.
             </p>
             <div className="flex space-x-4">
@@ -79,7 +79,7 @@ export function Footer() {
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-emerald-400" />
-                <span className="text-gray-300">support@ecomart.com</span>
+                <span className="text-gray-300">support@maamart.com</span>
               </li>
             </ul>
 
@@ -103,7 +103,7 @@ export function Footer() {
 
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p className="text-gray-400 text-sm">
-            © 2024 EcoMart. All rights reserved. Designed with ❤️ for premium shopping experience.
+            © 2024 Maa Mart. All rights reserved. Designed with ❤️ for premium shopping experience.
           </p>
           <div className="flex space-x-6 text-sm">
             <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">Terms of Service</a>

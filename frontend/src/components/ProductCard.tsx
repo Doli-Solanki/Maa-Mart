@@ -1,36 +1,46 @@
+import { useState } from "react";
 import { Product } from "@/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { Heart, ShoppingCart, Star, Loader2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
 import { useWishlist } from "@/hooks/useWishlist";
+import { formatINR } from "@/utils/currency";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addToCart } = useCart();
+  const { addToCart, openCart } = useCart();
   const { toast } = useToast();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const [isAdding, setIsAdding] = useState(false);
 
   const inWishlist = isInWishlist(product.id);
 
-  const handleAddToCart = () => {
-    debugger;
-    addToCart(product);
-    toast({
-      title: "Added to Cart",
-      description: `${product.name} has been added to your cart.`,
-    });
+  const handleAddToCart = async () => {
+    setIsAdding(true);
+    try {
+      await addToCart(product);
+      openCart();
+      toast({
+        title: 'Added to Cart',
+        description: `${product.name} has been added to your cart.`,
+      });
+    } catch {
+      toast({ title: 'Error', description: 'Could not add item to cart.', variant: 'destructive' });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const discountPercentage = product.originalPrice
     ? Math.round(
-        ((product.originalPrice - product.price) / product.originalPrice) * 100
-      )
+      ((product.originalPrice - product.price) / product.originalPrice) * 100
+    )
     : 0;
 
   return (
@@ -67,18 +77,16 @@ export function ProductCard({ product }: ProductCardProps) {
         <Button
           size="sm"
           variant="ghost"
-          className={`absolute top-3 right-3 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-md z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 ${
-            inWishlist ? "text-red-500" : ""
-          }`}
+          className={`absolute top-3 right-3 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-md z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 ${inWishlist ? "text-red-500" : ""
+            }`}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             toggleWishlist(product);
             toast({
               title: inWishlist ? "Removed from Wishlist" : "Added to Wishlist",
-              description: `${product.name} ${
-                inWishlist ? "was removed from" : "has been added to"
-              } your wishlist.`,
+              description: `${product.name} ${inWishlist ? "was removed from" : "has been added to"
+                } your wishlist.`,
             });
           }}
         >
@@ -104,11 +112,10 @@ export function ProductCard({ product }: ProductCardProps) {
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`w-4 h-4 ${
-                    i < Math.floor(product.rating)
-                      ? "text-yellow-400 fill-current"
-                      : "text-gray-300"
-                  }`}
+                  className={`w-4 h-4 ${i < Math.floor(product.rating)
+                    ? "text-yellow-400 fill-current"
+                    : "text-gray-300"
+                    }`}
                 />
               ))}
             </div>
@@ -120,11 +127,11 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Price */}
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-emerald-600">
-              ${product.price}
+              {formatINR(product.price)}
             </span>
             {product.originalPrice && (
               <span className="text-lg text-gray-400 line-through">
-                ${product.originalPrice}
+                {formatINR(product.originalPrice)}
               </span>
             )}
           </div>
@@ -132,11 +139,15 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Add to Cart Button */}
           <Button
             onClick={handleAddToCart}
-            disabled={!product.inStock}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-full py-6 text-base font-semibold transition-all duration-300 hover:shadow-lg"
+            disabled={!product.inStock || isAdding}
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-full py-6 text-base font-semibold transition-all duration-300 hover:shadow-lg disabled:opacity-70"
           >
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            {!product.inStock ? "Out of Stock" : "Add to Cart"}
+            {isAdding ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <ShoppingCart className="w-5 h-5 mr-2" />
+            )}
+            {!product.inStock ? "Out of Stock" : isAdding ? "Adding..." : "Add to Cart"}
           </Button>
         </div>
       </CardContent>

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatINR } from "@/utils/currency";
 
 interface Product {
   id: number;
@@ -323,7 +324,7 @@ export default function ProductManagement({
                       ? String(product.category.name || "Uncategorized")
                       : "Uncategorized"}
                   </TableCell>
-                  <TableCell>${product.price.toFixed(2)}</TableCell>
+                  <TableCell>{formatINR(product.price)}</TableCell>
                   <TableCell>{product.stock}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">

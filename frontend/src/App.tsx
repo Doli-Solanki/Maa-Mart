@@ -14,6 +14,7 @@ import SignupPage from "@/pages/SignupPage";
 import WishlistPage from "@/pages/WishlistPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AdminDashboard from "@/pages/AdminDashboard";
+import OrderHistoryPage from "@/pages/OrderHistoryPage";
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -68,6 +69,7 @@ function App() {
         />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
+        <Route path="/orders" element={<OrderHistoryPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/login" element={<LoginPage />} />

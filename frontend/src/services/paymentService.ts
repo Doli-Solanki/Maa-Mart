@@ -46,10 +46,13 @@ export interface VerifyPaymentResponse {
 export const createRazorpayOrder = async (
   data: CreateOrderRequest
 ): Promise<CreateOrderResponse> => {
+  const token = localStorage.getItem('auth_token_v1');
+  
   const response = await fetch(`${API_URL}/payment/create-order`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(data),
   });
@@ -66,10 +69,13 @@ export const createRazorpayOrder = async (
 export const verifyRazorpayPayment = async (
   data: VerifyPaymentRequest
 ): Promise<VerifyPaymentResponse> => {
+  const token = localStorage.getItem('auth_token_v1');
+  
   const response = await fetch(`${API_URL}/payment/verify-payment`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(data),
   });

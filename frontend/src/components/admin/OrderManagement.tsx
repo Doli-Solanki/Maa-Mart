@@ -18,12 +18,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatINR } from '@/utils/currency';
 
 interface Order {
   id: number;
   userId: number;
   items: any[];
   totalPrice: number;
+  status: string;
   paymentMethod: string;
   paymentStatus: string;
   address: string;
@@ -60,7 +62,7 @@ export default function OrderManagement({ onUpdate }: { onUpdate?: () => void })
     try {
       await apiRequest(`/admin/orders/${orderId}/status`, {
         method: 'PUT',
-        body: { paymentStatus: newStatus },
+        body: JSON.stringify({ status: newStatus }),
       });
       toast.success('Order status updated');
       fetchOrders();
@@ -82,14 +84,14 @@ export default function OrderManagement({ onUpdate }: { onUpdate?: () => void })
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'pending':
-        return 'bg-yellow-500';
-      case 'failed':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+      case 'delivered': return 'bg-green-500';
+      case 'confirmed': return 'bg-blue-500';
+      case 'processing': return 'bg-purple-500';
+      case 'shipped': return 'bg-indigo-500';
+      case 'pending': return 'bg-yellow-500';
+      case 'cancelled': return 'bg-gray-500';
+      case 'failed': return 'bg-red-500';
+      default: return 'bg-gray-400';
     }
   };
 
@@ -142,28 +144,32 @@ export default function OrderManagement({ onUpdate }: { onUpdate?: () => void })
                     {Array.isArray(order.items) ? order.items.length : 0} item(s)
                   </TableCell>
                   <TableCell className="font-medium">
-                    ${order.totalPrice.toFixed(2)}
+                    {formatINR(order.totalPrice)}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{order.paymentMethod}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(order.paymentStatus)}>
-                      {order.paymentStatus}
+                    <Badge className={getStatusColor(order.status)}>
+                      {order.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm">{formatDate(order.createdAt)}</TableCell>
                   <TableCell>
                     <Select
-                      value={order.paymentStatus}
+                      value={order.status}
                       onValueChange={(value) => handleStatusChange(order.id, value)}
                     >
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-36">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
                         <SelectItem value="failed">Failed</SelectItem>
                       </SelectContent>
                     </Select>

@@ -27,3 +27,29 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export interface OrderItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+  image?: string;
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed';
+
+export interface Order {
+  id: number;
+  userId: number;
+  items: OrderItem[];
+  totalPrice: number;
+  status: OrderStatus;
+  paymentMethod: string;
+  paymentStatus: string;
+  address: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  createdAt: string;
+  updatedAt: string;
+}

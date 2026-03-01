@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/hooks/useCart";
 import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   loadRazorpayScript,
@@ -26,17 +26,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatINR } from "@/utils/currency";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CartPage() {
   const {
     cartItems,
+    cartTotals,
     updateQuantity,
     removeFromCart,
     clearCart,
     getTotalItems,
-    getTotalPrice,
   } = useCart();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -45,9 +49,21 @@ export default function CartPage() {
   const [deliveryAddress, setDeliveryAddress] = useState("");
 
   const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  const { subtotal, gst, total: totalPrice } = cartTotals;
 
   const initiatePayment = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to place an order.",
+        variant: "destructive",
+      });
+      // Redirect to login page
+      navigate("/login");
+      return;
+    }
+
     // Validate address input
     if (!deliveryAddress.trim()) {
       toast({
@@ -76,6 +92,7 @@ export default function CartPage() {
 
       // Prepare order data to store in our database (pending status)
       const orderDataForDB = {
+        userId: user?.id ? parseInt(user.id) : undefined,
         items: cartItems.map((item) => ({
           productId: item.product.id,
           name: item.product.name,
@@ -122,7 +139,7 @@ export default function CartPage() {
               });
 
               // Clear cart after successful payment
-              clearCart();
+              await clearCart();
             } else {
               toast({
                 title: "Payment Verification Failed",
@@ -234,11 +251,11 @@ export default function CartPage() {
                     <p className="text-sm text-gray-500">{product.category}</p>
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-emerald-600 font-semibold text-lg">
-                        ${product.price.toFixed(2)}
+                        {formatINR(product.price)}
                       </span>
                       {product.originalPrice && (
                         <span className="text-gray-400 line-through">
-                          ${product.originalPrice.toFixed(2)}
+                          {formatINR(product.originalPrice)}
                         </span>
                       )}
                     </div>
@@ -265,7 +282,7 @@ export default function CartPage() {
                   </div>
 
                   <div className="w-24 text-right font-semibold">
-                    ${(product.price * quantity).toFixed(2)}
+                    {formatINR(product.price * quantity)}
                   </div>
 
                   <Button
@@ -286,8 +303,12 @@ export default function CartPage() {
             <CardContent className="p-6 space-y-4">
               <h2 className="text-xl font-semibold">Order Summary</h2>
               <div className="flex justify-between text-sm text-gray-600">
-                <span>Subtotal</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>Subtotal ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+                <span>{formatINR(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>GST (18%)</span>
+                <span>{formatINR(gst)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Shipping</span>
@@ -295,11 +316,23 @@ export default function CartPage() {
               </div>
               <div className="border-t pt-3 flex justify-between font-semibold">
                 <span>Total</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>{formatINR(totalPrice)}</span>
               </div>
               <Button
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => setShowAddressDialog(true)}
+                onClick={() => {
+                  // Check if user is logged in before showing address dialog
+                  if (!user) {
+                    toast({
+                      title: "Login Required",
+                      description: "Please log in to place an order.",
+                      variant: "destructive",
+                    });
+                    navigate("/login");
+                    return;
+                  }
+                  setShowAddressDialog(true);
+                }}
                 disabled={isProcessingPayment}
               >
                 {isProcessingPayment ? "Processing..." : "Proceed to Pay"}

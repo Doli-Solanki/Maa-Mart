@@ -16,6 +16,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import paymentRoutes from "./routes/payment.js";
+import cartRoutes from "./routes/cartRoutes.js";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -124,6 +125,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Global error handling middleware (must be after all routes)
 app.use((err, req, res, next) => {
@@ -172,3 +174,6 @@ const PORT = process.env.PORT || 5000;
     process.exit(1);
   }
 })();
+
+// Export app for testing
+export default app;
