@@ -116,12 +116,11 @@ export default function CartDrawer() {
                                             <p className="text-emerald-600 font-semibold text-sm mt-0.5">
                                                 {formatINR(product.price)}
                                             </p>
-                                            {product.stock !== undefined && product.stock < quantity && (
+                                            {!product.inStock && (
                                                 <p className="text-red-500 text-xs mt-0.5">
-                                                    Only {product.stock} left!
+                                                    Out of stock!
                                                 </p>
                                             )}
-
                                             {/* Qty controls */}
                                             <div className="flex items-center gap-2 mt-2">
                                                 <button

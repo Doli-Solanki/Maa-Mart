@@ -37,7 +37,7 @@ export default function SignupPage() {
       <Card>
         <CardHeader>
           <CardTitle>Create your account</CardTitle>
-          <CardDescription>Join EcoMart to start shopping</CardDescription>
+          <CardDescription>Join Maa Mart to start shopping</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>

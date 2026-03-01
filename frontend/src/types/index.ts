@@ -9,6 +9,7 @@ export interface Product {
   rating: number;
   reviews: number;
   inStock: boolean;
+  stock?: number;       // optional: number of units available (from DB)
   featured?: boolean;
   description?: string;
 }
