@@ -11,6 +11,7 @@ import ProductManagement from '@/components/admin/ProductManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import OrderManagement from '@/components/admin/OrderManagement';
 import { toast } from 'sonner';
+import { formatINR } from '@/utils/currency';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading } = useAuth();
@@ -139,7 +140,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${loadingStats ? '...' : stats.totalRevenue.toFixed(2)}
+                {loadingStats ? '...' : formatINR(stats.totalRevenue)}
               </div>
               <p className="text-xs text-muted-foreground">All time revenue</p>
             </CardContent>

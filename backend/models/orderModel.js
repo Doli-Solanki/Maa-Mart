@@ -7,10 +7,20 @@ const Order = sequelize.define('Order', {
   totalPrice: { type: DataTypes.FLOAT },
   paymentMethod: { type: DataTypes.STRING },
   paymentStatus: { type: DataTypes.STRING, defaultValue: 'pending' },
+  status: {
+    type: DataTypes.ENUM('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'failed'),
+    defaultValue: 'pending'
+  },
   address: { type: DataTypes.TEXT },
   razorpayOrderId: { type: DataTypes.STRING, allowNull: true },
   razorpayPaymentId: { type: DataTypes.STRING, allowNull: true },
   razorpaySignature: { type: DataTypes.STRING, allowNull: true }
+}, {
+  indexes: [
+    { fields: ['userId'] },
+    { fields: ['status'] },
+    { fields: ['createdAt'] }
+  ]
 });
 
 export default Order;

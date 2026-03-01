@@ -25,6 +25,20 @@ const Product = sequelize.define("Product", {
       key: "id",
     },
   },
+  averageRating: {
+    type: DataTypes.DECIMAL(3, 2),
+    defaultValue: 0
+  },
+  totalReviews: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  }
+}, {
+  indexes: [
+    { fields: ['category_id'] },
+    { fields: ['stock'] },
+    { fields: ['averageRating'] }
+  ]
 });
 
 export default Product;

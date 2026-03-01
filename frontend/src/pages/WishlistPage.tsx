@@ -5,6 +5,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { ArrowLeft, HeartCrack, Trash2, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '@/hooks/useCart';
+import { formatINR } from '@/utils/currency';
 
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist, clearWishlist, getTotalItems } = useWishlist();
@@ -61,9 +62,9 @@ export default function WishlistPage() {
                     <h3 className="font-semibold text-lg">{product.name}</h3>
                     <p className="text-sm text-gray-500">{product.category}</p>
                     <div className="mt-2 flex items-center gap-2">
-                      <span className="text-emerald-600 font-semibold text-lg">${product.price.toFixed(2)}</span>
+                      <span className="text-emerald-600 font-semibold text-lg">{formatINR(product.price)}</span>
                       {product.originalPrice && (
-                        <span className="text-gray-400 line-through">${product.originalPrice.toFixed(2)}</span>
+                        <span className="text-gray-400 line-through">{formatINR(product.originalPrice)}</span>
                       )}
                     </div>
                   </div>

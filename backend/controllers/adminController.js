@@ -62,14 +62,21 @@ export const getOrderById = async (req, res) => {
 };
 
 // Update order status
+const VALID_ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'failed'];
+
 export const updateOrderStatus = async (req, res) => {
   try {
-    const { paymentStatus } = req.body;
+    const { status } = req.body;
+    if (!status || !VALID_ORDER_STATUSES.includes(status)) {
+      return res.status(400).json({
+        message: `Invalid status. Must be one of: ${VALID_ORDER_STATUSES.join(', ')}`
+      });
+    }
     const order = await Order.findByPk(req.params.id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-    order.paymentStatus = paymentStatus || order.paymentStatus;
+    order.status = status;
     await order.save();
     res.json(order);
   } catch (error) {
@@ -85,8 +92,8 @@ export const getDashboardStats = async (req, res) => {
     const totalOrders = await Order.count();
     const totalProducts = await Product.count();
     const totalRevenue = await Order.sum('totalPrice') || 0;
-    const pendingOrders = await Order.count({ where: { paymentStatus: 'pending' } });
-    const completedOrders = await Order.count({ where: { paymentStatus: 'completed' } });
+    const pendingOrders = await Order.count({ where: { status: 'pending' } });
+    const completedOrders = await Order.count({ where: { status: 'delivered' } });
 
     res.json({
       totalUsers,
