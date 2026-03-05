@@ -34,6 +34,8 @@ const Product = sequelize.define("Product", {
     defaultValue: 0
   }
 }, {
+  tableName: "products",   // ⭐ IMPORTANT FIX
+    timestamps: true,  
   indexes: [
     { fields: ['category_id'] },
     { fields: ['stock'] },

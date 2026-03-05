@@ -32,6 +32,7 @@ if (!process.env.JWT_SECRET) {
 
 /* --------------------------------- App ----------------------------------- */
 const app = express();
+app.set("trust proxy", 1);
 
 // Security: Helmet for security headers
 try {
@@ -167,7 +168,7 @@ const PORT = process.env.PORT || 5000;
 
     // Skip sync because tables already exist
     console.log("✅ Using existing database tables");
-    
+
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV || "development"}`);
