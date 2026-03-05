@@ -19,11 +19,11 @@ const sequelize = new Sequelize(
   process.env.DB_PASS,
   {
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     dialect: "mysql",
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: process.env.NODE_ENV === "development" ? console.log : false,
   }
 );
-
 // Note: Authentication is handled in server.js after models are loaded
 // This allows proper error handling and prevents app from starting with invalid DB config
 
