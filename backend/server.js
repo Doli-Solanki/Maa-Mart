@@ -157,14 +157,17 @@ const PORT = process.env.PORT || 5000;
     console.log("✅ MySQL connected successfully!");
 
     // Only use alter in development, use migrations in production
-    const syncOptions =
-      process.env.NODE_ENV === "production"
-        ? { alter: false } // In production, use migrations instead
-        : {}; // In development, allow schema changes
+    // const syncOptions =
+    //   process.env.NODE_ENV === "production"
+    //     ? { alter: false } // In production, use migrations instead
+    //     : {}; // In development, allow schema changes
 
-    await sequelize.sync(syncOptions);
-    console.log("✅ Database models synced");
+    // await sequelize.sync(syncOptions);
+    // console.log("✅ Database models synced");
 
+    // Skip sync because tables already exist
+    console.log("✅ Using existing database tables");
+    
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV || "development"}`);
